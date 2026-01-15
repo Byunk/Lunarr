@@ -1,0 +1,29 @@
+{
+  "name": "lunarr",
+  "description": "Agent mesh for organizational knowledge routing and discovery.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.0.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "prettier": "3.8.0",
+    "typescript-eslint": "8.52.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,cjs,mjs,cts,mts,json,css,md}": [
+      "pnpm exec prettier --write --ignore-unknown"
+    ],
+    "*.{js,jsx,ts,tsx,cjs,mjs,cts,mts}": [
+      "pnpm exec eslint --fix --max-warnings=0 --no-warn-ignored"
+    ]
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "pnpm@10.6.2"
+}
