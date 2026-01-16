@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  default:
+    desc: Display available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  install:
+    desc: Install desktop dependencies
+    cmds:
+      - pnpm install
+
+  dev:
+    desc: Run desktop development server
+    cmds:
+      - pnpm tauri dev
+
+  build:
+    desc: Build desktop app
+    cmds:
+      - pnpm tauri build
+
+  lint:
+    desc: Lint desktop code
+    cmds:
+      - pnpm eslint .
+
+  format:
+    desc: Format desktop code
+    cmds:
+      - pnpm prettier --write .
