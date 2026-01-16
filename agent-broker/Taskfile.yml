@@ -49,6 +49,11 @@ tasks:
     cmds:
       - go test -v -race ./...
 
+  test:integration:
+    desc: Run integration tests (requires QDRANT_HOST)
+    cmds:
+      - go test -v -race ./tests/integration/...
+
   clean:
     desc: Remove build artifacts
     cmds:

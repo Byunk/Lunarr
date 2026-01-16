@@ -72,3 +72,11 @@ type Config struct {
 
 - Table-driven tests with `t.Parallel()`
 - No docstrings for test functions
+- **Layer separation**: Store tests cover data operations, registry tests cover business logic, handler tests cover HTTP concerns
+- **No trivial tests**: Don't test no-op functions (e.g., `Ping()` that always returns nil)
+- **No duplicate coverage**: Handler tests trust registry/store - don't re-test validation
+- **Weak tests**: Remove tests that only verify `!= nil` without meaningful assertions
+
+### API Changes
+
+When modifying HTTP endpoints, keep `api/openapi.yaml` in sync with the implementation.

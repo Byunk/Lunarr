@@ -2,7 +2,12 @@ module github.com/lunarr-ai/lunarr/agent-broker
 
 go 1.25.5
 
-require github.com/qdrant/go-client v1.16.2
+require (
+	github.com/a2aproject/a2a-go v0.3.4
+	github.com/google/uuid v1.6.0
+	github.com/joho/godotenv v1.5.1
+	github.com/qdrant/go-client v1.16.2
+)
 
 require (
 	golang.org/x/net v0.47.0 // indirect

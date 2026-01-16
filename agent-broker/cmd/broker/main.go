@@ -8,6 +8,7 @@ import (
 
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/config"
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/handler"
+	"github.com/lunarr-ai/lunarr/agent-broker/internal/registry"
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/server"
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/store"
 )
@@ -49,8 +50,23 @@ func run() error {
 
 	logger.Info("connected to qdrant")
 
+	agentStore, err := store.NewQdrantStore(ctx)
+	if err != nil {
+		logger.Error("failed to create qdrant store", "error", err)
+		return err
+	}
+	defer func() {
+		if err := agentStore.Close(); err != nil {
+			logger.Error("failed to close agent store", "error", err)
+		}
+	}()
+
+	registryService := registry.NewRegistryService(agentStore)
+
 	mux := http.NewServeMux()
 	handler.NewHealthHandler(qdrantStore).RegisterRoutes(mux)
+	handler.NewAdminHandler(registryService).RegisterRoutes(mux)
+	handler.NewAgentsHandler(registryService).RegisterRoutes(mux)
 
 	srv := server.New(mux,
 		server.WithPort(cfg.Port),
