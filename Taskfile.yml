@@ -19,3 +19,13 @@ tasks:
     cmds:
       - task --list
     silent: true
+
+  dev:start:
+    desc: Start the development stack
+    cmds:
+      - docker compose -f compose.dev.yml up -d
+
+  dev:stop:
+    desc: Stop the development stack
+    cmds:
+      - docker compose -f compose.dev.yml down

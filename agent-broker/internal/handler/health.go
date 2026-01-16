@@ -19,8 +19,8 @@ type HealthResponse struct {
 
 // HealthChecks contains status of individual health check components.
 type HealthChecks struct {
-	// VectorStorage is the vector store status ("up" or "down").
-	VectorStorage string `json:"vector_storage"`
+	// Registry is the registry status ("up" or "down").
+	Registry string `json:"registry"`
 }
 
 // HealthHandler handles HTTP health check requests.
@@ -42,7 +42,7 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
 		Status: "healthy",
 		Checks: HealthChecks{
-			VectorStorage: "up",
+			Registry: "up",
 		},
 	}
 	statusCode := http.StatusOK
@@ -50,7 +50,7 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.store != nil {
 		if err := h.store.Ping(ctx); err != nil {
 			response.Status = "unhealthy"
-			response.Checks.VectorStorage = "down"
+			response.Checks.Registry = "down"
 			statusCode = http.StatusServiceUnavailable
 		}
 	}

@@ -12,13 +12,23 @@ type Config struct {
 	Port int
 	// LogLevel is the minimum log level for logging.
 	LogLevel slog.Level
+
+	// Qdrant config
+	QdrantHost   string
+	QdrantPort   int
+	QdrantAPIKey string
+	QdrantUseTLS bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
 	return &Config{
-		Port:     getEnvInt("PORT", 8080),
-		LogLevel: getEnvLogLevel("LOG_LEVEL", slog.LevelInfo),
+		Port:         getEnvInt("PORT", 8080),
+		LogLevel:     getEnvLogLevel("LOG_LEVEL", slog.LevelInfo),
+		QdrantHost:   getEnv("QDRANT_HOST", "localhost"),
+		QdrantPort:   getEnvInt("QDRANT_PORT", 6334),
+		QdrantAPIKey: getEnv("QDRANT_API_KEY", ""),
+		QdrantUseTLS: getEnvBool("QDRANT_USE_TLS", false),
 	}
 }
 
@@ -36,6 +46,18 @@ func getEnvInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	switch value {
+	case "true", "1":
+		return true
+	case "false", "0":
+		return false
+	default:
+		return defaultValue
+	}
 }
 
 func getEnvLogLevel(key string, defaultValue slog.Level) slog.Level {
