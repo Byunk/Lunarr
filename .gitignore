@@ -38,3 +38,12 @@ next-env.d.ts
 # ai
 .claude/*.local.json
 .playwright-mcp/
+
+# Binaries
+bin/
+
+# Taskfile cache
+.task/
+
+# Implementation plan (local only)
+PLAN.md

@@ -36,6 +36,10 @@
     ],
     "api/pyproject.toml": [
       "bash -c 'task -d api lock'"
+    ],
+    "agent-broker/**/*.go": [
+      "task -d agent-broker fmt --",
+      "task -d agent-broker lint --"
     ]
   },
   "engines": {

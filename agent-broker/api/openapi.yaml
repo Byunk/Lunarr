@@ -1,0 +1,531 @@
+openapi: 3.1.0
+info:
+  title: Agent Broker Admin API
+  description: |
+    REST API for managing agent registrations in the Lunarr Agent Broker.
+
+    The broker also exposes A2A JSON-RPC endpoints for discovery, routing, and broadcast,
+    which are not documented here (see A2A protocol specification).
+  version: 1.0.0
+  contact:
+    name: Lunarr
+    url: https://lunarr.io
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://broker.lunarr.io
+    description: Production
+
+tags:
+  - name: Health
+    description: Service health checks
+  - name: Public
+    description: Public endpoints (no authentication required)
+  - name: Admin
+    description: Agent management (admin only)
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: |
+        Returns service health status. Returns 503 if vector storage is unavailable.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service unhealthy (vector storage unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /.well-known/agent-card.json:
+    get:
+      tags:
+        - Public
+      summary: Get broker's agent card
+      description: |
+        Returns the broker's own A2A-compliant agent card.
+        This is the standard A2A discovery endpoint.
+      operationId: getBrokerAgentCard
+      responses:
+        "200":
+          description: Broker's agent card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentCard"
+
+  /v1/agents/{agentId}/card:
+    get:
+      tags:
+        - Public
+      summary: Get agent's A2A card
+      description: |
+        Returns the A2A-compliant agent card for a registered agent.
+      operationId: getAgentCard
+      parameters:
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: Agent's A2A card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentCard"
+        "404":
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/admin/agents:
+    get:
+      tags:
+        - Admin
+      summary: List agents
+      description: |
+        Returns a paginated list of registered agents with optional filtering.
+      operationId: listAgents
+      parameters:
+        - name: offset
+          in: query
+          description: Number of items to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of items to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated, matches any)
+          schema:
+            type: string
+          example: "security,compliance"
+        - name: skills
+          in: query
+          description: Filter by skill IDs (comma-separated, matches any)
+          schema:
+            type: string
+          example: "security-audit,code-review"
+        - name: capabilities
+          in: query
+          description: Filter by capabilities (comma-separated, must have all)
+          schema:
+            type: string
+          example: "streaming"
+        - name: q
+          in: query
+          description: Search query for name/description
+          schema:
+            type: string
+          example: "security"
+      responses:
+        "200":
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentListResponse"
+
+    post:
+      tags:
+        - Admin
+      summary: Register agent
+      description: |
+        Register a new agent with the broker. The agent card will be embedded
+        for semantic search.
+      operationId: registerAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAgentRequest"
+      responses:
+        "201":
+          description: Agent registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRecord"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Agent with this ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/admin/agents/{agentId}:
+    get:
+      tags:
+        - Admin
+      summary: Get agent
+      description: |
+        Returns the full agent record including metadata.
+      operationId: getAgent
+      parameters:
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: Agent record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRecord"
+        "404":
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Admin
+      summary: Update agent
+      description: |
+        Update an existing agent's registration. Re-embeds the agent card.
+      operationId: updateAgent
+      parameters:
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAgentRequest"
+      responses:
+        "200":
+          description: Agent updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRecord"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Admin
+      summary: Remove agent
+      description: |
+        Unregister an agent from the broker.
+      operationId: deleteAgent
+      parameters:
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "204":
+          description: Agent removed
+        "404":
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    AgentId:
+      name: agentId
+      in: path
+      required: true
+      description: Unique agent identifier
+      schema:
+        type: string
+        pattern: "^[a-zA-Z0-9_-]+$"
+        minLength: 1
+        maxLength: 64
+      example: "security-scanner-01"
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - checks
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - unhealthy
+          description: Overall service health
+        checks:
+          type: object
+          properties:
+            vector_storage:
+              type: string
+              enum:
+                - up
+                - down
+              description: Vector storage connectivity
+          required:
+            - vector_storage
+      example:
+        status: healthy
+        checks:
+          vector_storage: up
+
+    AgentCard:
+      type: object
+      description: A2A-compliant agent card
+      required:
+        - name
+        - url
+        - version
+        - skills
+      properties:
+        name:
+          type: string
+          description: Human-readable agent name
+          example: "Security Scanner"
+        description:
+          type: string
+          description: Agent description
+          example: "Analyzes code for security vulnerabilities"
+        url:
+          type: string
+          format: uri
+          description: Agent endpoint URL
+          example: "https://security-agent.example.com"
+        version:
+          type: string
+          description: Agent version
+          example: "1.0.0"
+        capabilities:
+          $ref: "#/components/schemas/AgentCapabilities"
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/Skill"
+          minItems: 1
+
+    AgentCapabilities:
+      type: object
+      properties:
+        streaming:
+          type: boolean
+          description: Whether agent supports streaming responses
+          default: false
+        pushNotifications:
+          type: boolean
+          description: Whether agent supports push notifications
+          default: false
+
+    Skill:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Unique skill identifier
+          example: "security-audit"
+        name:
+          type: string
+          description: Human-readable skill name
+          example: "Security Audit"
+        description:
+          type: string
+          description: Skill description
+          example: "Analyzes code for security vulnerabilities"
+        inputModes:
+          type: array
+          items:
+            type: string
+          default:
+            - "application/json"
+          example:
+            - "application/json"
+            - "text/plain"
+        outputModes:
+          type: array
+          items:
+            type: string
+          default:
+            - "application/json"
+          example:
+            - "application/json"
+
+    AgentRecord:
+      type: object
+      required:
+        - agent_id
+        - agent_card
+        - endpoint
+        - skills
+        - tags
+        - registered_at
+        - updated_at
+      properties:
+        agent_id:
+          type: string
+          description: Unique agent identifier
+          example: "security-scanner-01"
+        agent_card:
+          $ref: "#/components/schemas/AgentCard"
+        endpoint:
+          type: string
+          format: uri
+          description: Agent endpoint URL
+          example: "https://security-agent.example.com"
+        skills:
+          type: array
+          items:
+            type: string
+          description: List of skill IDs for exact matching
+          example:
+            - "security-audit"
+            - "vulnerability-scan"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Classification tags
+          example:
+            - "security"
+            - "compliance"
+        registered_at:
+          type: string
+          format: date-time
+          description: Registration timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        registered_by:
+          type: string
+          description: Admin user who registered the agent
+          example: "admin@lunarr.io"
+
+    RegisterAgentRequest:
+      type: object
+      required:
+        - agent_id
+        - agent_card
+      properties:
+        agent_id:
+          type: string
+          description: Unique agent identifier
+          pattern: "^[a-zA-Z0-9_-]+$"
+          minLength: 1
+          maxLength: 64
+          example: "security-scanner-01"
+        agent_card:
+          $ref: "#/components/schemas/AgentCard"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Classification tags
+          default: []
+          example:
+            - "security"
+            - "compliance"
+
+    UpdateAgentRequest:
+      type: object
+      required:
+        - agent_card
+      properties:
+        agent_card:
+          $ref: "#/components/schemas/AgentCard"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Classification tags
+          example:
+            - "security"
+            - "compliance"
+
+    AgentListResponse:
+      type: object
+      required:
+        - agents
+        - pagination
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentRecord"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Pagination:
+      type: object
+      required:
+        - total
+        - offset
+        - limit
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+          example: 42
+        offset:
+          type: integer
+          description: Current offset
+          example: 0
+        limit:
+          type: integer
+          description: Items per page
+          example: 20
+        has_more:
+          type: boolean
+          description: Whether there are more items
+          example: true
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "AGENT_NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Agent with ID 'invalid-id' not found"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true

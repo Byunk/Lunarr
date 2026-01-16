@@ -10,13 +10,9 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-    - gofumpt
-    - gosimple
     - gocritic
 
 linters-settings:
-  gofumpt:
-    extra-rules: true
   gocritic:
     enabled-tags:
       - diagnostic
