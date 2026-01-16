@@ -6,6 +6,9 @@ includes:
   desktop:
     taskfile: ./desktop/Taskfile.yml
     dir: ./desktop
+  agent-broker:
+    taskfile: ./agent-broker/Taskfile.yml
+    dir: ./agent-broker
   api:
     taskfile: ./api/Taskfile.yml
     dir: ./api
