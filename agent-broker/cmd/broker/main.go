@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -59,7 +60,11 @@ func run() error {
 
 	registryService := registry.NewRegistryService(qdrantStore, registry.WithEmbedder(embedder))
 
+	brokerURL := fmt.Sprintf("http://localhost:%d", cfg.Port)
+
 	mux := http.NewServeMux()
+
+	handler.NewBrokerHandler(registryService, brokerURL).RegisterRoutes(mux)
 	handler.NewHealthHandler(qdrantStore).RegisterRoutes(mux)
 	handler.NewAdminHandler(registryService).RegisterRoutes(mux)
 	handler.NewAgentsHandler(registryService).RegisterRoutes(mux)
