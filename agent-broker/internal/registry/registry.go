@@ -10,6 +10,7 @@ import (
 	"github.com/a2aproject/a2a-go/a2a"
 
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/store"
+	"github.com/lunarr-ai/lunarr/agent-broker/pkg/embedding"
 )
 
 var agentIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
@@ -18,12 +19,36 @@ var agentIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 type RegistryService struct {
 	// store is the agent storage backend.
 	store store.Store
+	// embedder generates embeddings for agents (optional).
+	embedder embedding.Embedder
+}
+
+// Options configures the RegistryService.
+type Options struct {
+	// Embedder generates embeddings for agents.
+	Embedder embedding.Embedder
+}
+
+// Option is a functional option for RegistryService.
+type Option func(*Options)
+
+// WithEmbedder sets the embedder for generating agent embeddings.
+func WithEmbedder(e embedding.Embedder) Option {
+	return func(o *Options) {
+		o.Embedder = e
+	}
 }
 
 // NewRegistryService creates a new registry service.
-func NewRegistryService(s store.Store) *RegistryService {
+func NewRegistryService(s store.Store, opts ...Option) *RegistryService {
+	var options Options
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	return &RegistryService{
-		store: s,
+		store:    s,
+		embedder: options.Embedder,
 	}
 }
 
@@ -46,12 +71,23 @@ func (s *RegistryService) Create(ctx context.Context, input CreateInput) (*store
 		return nil, err
 	}
 
+	var emb []float32
+	if s.embedder != nil {
+		embeddings, err := s.embedder.Embed(ctx, []string{buildEmbeddingText(input.Card)})
+		if err != nil {
+			return nil, fmt.Errorf("generate embedding: %w", err)
+		}
+		if len(embeddings) > 0 {
+			emb = embeddings[0]
+		}
+	}
+
 	now := time.Now()
 	agent := &store.RegisteredAgent{
 		ID:        input.ID,
 		Card:      input.Card,
 		Tags:      input.Tags,
-		Embedding: nil,
+		Embedding: emb,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -124,9 +160,20 @@ func (s *RegistryService) Update(ctx context.Context, input UpdateInput) (*store
 		return nil, err
 	}
 
+	var emb []float32
+	if s.embedder != nil {
+		embeddings, err := s.embedder.Embed(ctx, []string{buildEmbeddingText(input.Card)})
+		if err != nil {
+			return nil, fmt.Errorf("generate embedding: %w", err)
+		}
+		if len(embeddings) > 0 {
+			emb = embeddings[0]
+		}
+	}
+
 	existing.Card = input.Card
 	existing.Tags = input.Tags
-	existing.Embedding = nil
+	existing.Embedding = emb
 	existing.UpdatedAt = time.Now()
 
 	if err := s.store.UpdateAgent(ctx, existing); err != nil {
@@ -184,4 +231,20 @@ func validateAgentID(id string) error {
 		return fmt.Errorf("agent_id must match pattern ^[a-zA-Z0-9_-]+$")
 	}
 	return nil
+}
+
+// buildEmbeddingText constructs the text to embed from an agent card.
+func buildEmbeddingText(card a2a.AgentCard) string {
+	var parts []string
+	parts = append(parts, card.Name)
+	if card.Description != "" {
+		parts = append(parts, card.Description)
+	}
+	for _, skill := range card.Skills {
+		parts = append(parts, skill.Name)
+		if skill.Description != "" {
+			parts = append(parts, skill.Description)
+		}
+	}
+	return strings.Join(parts, " ")
 }

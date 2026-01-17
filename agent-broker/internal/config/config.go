@@ -18,6 +18,10 @@ type Config struct {
 	QdrantPort   int
 	QdrantAPIKey string
 	QdrantUseTLS bool
+
+	// Embedding config
+	EmbeddingURL string
+	EmbeddingDim int
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -29,6 +33,8 @@ func Load() *Config {
 		QdrantPort:   getEnvInt("QDRANT_PORT", 6334),
 		QdrantAPIKey: getEnv("QDRANT_API_KEY", ""),
 		QdrantUseTLS: getEnvBool("QDRANT_USE_TLS", false),
+		EmbeddingURL: getEnv("EMBEDDING_URL", "http://localhost:8080"),
+		EmbeddingDim: getEnvInt("EMBEDDING_DIM", 384),
 	}
 }
 

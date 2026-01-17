@@ -29,14 +29,14 @@ type Options struct {
 }
 
 // DefaultOptions returns Options with sensible defaults.
+// Note: VectorDimension must be set explicitly via WithVectorDimension().
 func DefaultOptions() Options {
 	return Options{
-		Host:            "localhost",
-		Port:            6334,
-		APIKey:          "",
-		UseTLS:          false,
-		CollectionName:  "agents",
-		VectorDimension: 1536,
+		Host:           "localhost",
+		Port:           6334,
+		APIKey:         "",
+		UseTLS:         false,
+		CollectionName: "agents",
 	}
 }
 
@@ -94,10 +94,15 @@ type QdrantStore struct {
 }
 
 // NewQdrantStore creates a QdrantStore with the given options.
+// VectorDimension must be set via WithVectorDimension().
 func NewQdrantStore(ctx context.Context, opts ...Option) (*QdrantStore, error) {
 	options := DefaultOptions()
 	for _, opt := range opts {
 		opt(&options)
+	}
+
+	if options.VectorDimension == 0 {
+		return nil, fmt.Errorf("VectorDimension must be set via WithVectorDimension()")
 	}
 
 	client, err := qdrant.NewClient(&qdrant.Config{

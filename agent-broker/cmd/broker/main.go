@@ -11,6 +11,7 @@ import (
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/registry"
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/server"
 	"github.com/lunarr-ai/lunarr/agent-broker/internal/store"
+	"github.com/lunarr-ai/lunarr/agent-broker/pkg/embedding"
 )
 
 func main() {
@@ -28,15 +29,22 @@ func run() error {
 		"log_level", cfg.LogLevel.String(),
 		"qdrant_host", cfg.QdrantHost,
 		"qdrant_port", cfg.QdrantPort,
+		"embedding_url", cfg.EmbeddingURL,
+		"embedding_dim", cfg.EmbeddingDim,
 	)
 
 	ctx := context.Background()
 
+	// Create embedder with configured dimension
+	embedder := embedding.NewClient(cfg.EmbeddingURL, cfg.EmbeddingDim)
+
+	// Create Qdrant store with configured dimension
 	qdrantStore, err := store.NewQdrantStore(ctx,
 		store.WithHost(cfg.QdrantHost),
 		store.WithPort(cfg.QdrantPort),
 		store.WithAPIKey(cfg.QdrantAPIKey),
 		store.WithTLS(cfg.QdrantUseTLS),
+		store.WithVectorDimension(uint64(cfg.EmbeddingDim)),
 	)
 	if err != nil {
 		logger.Error("failed to connect to qdrant", "error", err)
@@ -47,21 +55,9 @@ func run() error {
 			logger.Error("failed to close qdrant connection", "error", err)
 		}
 	}()
-
 	logger.Info("connected to qdrant")
 
-	agentStore, err := store.NewQdrantStore(ctx)
-	if err != nil {
-		logger.Error("failed to create qdrant store", "error", err)
-		return err
-	}
-	defer func() {
-		if err := agentStore.Close(); err != nil {
-			logger.Error("failed to close agent store", "error", err)
-		}
-	}()
-
-	registryService := registry.NewRegistryService(agentStore)
+	registryService := registry.NewRegistryService(qdrantStore, registry.WithEmbedder(embedder))
 
 	mux := http.NewServeMux()
 	handler.NewHealthHandler(qdrantStore).RegisterRoutes(mux)

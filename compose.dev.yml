@@ -7,5 +7,21 @@ services:
     volumes:
       - qdrant-data:/data
 
+  tei:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
+    platform: ${TEI_PLATFORM:-linux/amd64}
+    ports:
+      - "8080:80"
+    volumes:
+      - tei-data:/data
+    environment:
+      - MODEL_ID=${TEI_EMBEDDING_MODEL_ID}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1'
+
 volumes:
   qdrant-data:
+  tei-data:

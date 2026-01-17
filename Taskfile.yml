@@ -22,8 +22,23 @@ tasks:
 
   dev:start:
     desc: Start the development stack
+    preconditions:
+      - test: command -v docker
+        msg: "Docker must be installed"
+    vars:
+      TEI_PLATFORM: '{{.TEI_PLATFORM | default "linux/amd64"}}'
     cmds:
+      - cmd: echo "Starting dev stack on {{OS}}/{{ARCH}}..."
+        silent: true
+      - cmd: echo "TEI platform set to {{.TEI_PLATFORM}} (emulation required on ARM64)"
+        platforms: [darwin/arm64, linux/arm64]
+        silent: true
+      - cmd: echo "TEI platform set to {{.TEI_PLATFORM}} (native)"
+        platforms: [darwin/amd64, linux/amd64]
+        silent: true
       - docker compose -f compose.dev.yml up -d
+    env:
+      TEI_PLATFORM: "{{.TEI_PLATFORM}}"
 
   dev:stop:
     desc: Stop the development stack

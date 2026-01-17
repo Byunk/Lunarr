@@ -50,7 +50,7 @@ tasks:
       - go test -v -race ./...
 
   test:integration:
-    desc: Run integration tests (requires QDRANT_HOST)
+    desc: Run integration tests
     cmds:
       - go test -v -race ./tests/integration/...
 
